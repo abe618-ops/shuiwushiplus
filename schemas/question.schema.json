@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/abe618-ops/shuiwushiplus/schemas/question.schema.json",
+  "title": "TaxAgentStudyPlus Question",
+  "type": "object",
+  "required": [
+    "id",
+    "subject",
+    "questionType",
+    "stem",
+    "sourceType",
+    "policyVersion",
+    "verificationStatus"
+  ],
+  "properties": {
+    "id": {"type": "string"},
+    "subject": {
+      "type": "string",
+      "enum": [
+        "tax-law-1",
+        "tax-law-2",
+        "tax-service-practice",
+        "finance-accounting",
+        "tax-related-law"
+      ]
+    },
+    "chapter": {"type": "string"},
+    "knowledgePoints": {"type": "array", "items": {"type": "string"}},
+    "questionType": {
+      "type": "string",
+      "enum": [
+        "single-choice",
+        "multiple-choice",
+        "concept-discrimination",
+        "calculation",
+        "material",
+        "comprehensive",
+        "oral-explanation",
+        "counterfactual"
+      ]
+    },
+    "difficulty": {"type": "number", "minimum": 0, "maximum": 1},
+    "cognitiveLevel": {
+      "type": "string",
+      "enum": ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+    },
+    "stem": {"type": "string"},
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "text"],
+        "properties": {
+          "key": {"type": "string"},
+          "text": {"type": "string"}
+        }
+      }
+    },
+    "answer": {},
+    "explanation": {"type": "string"},
+    "calculationSteps": {"type": "array", "items": {"type": "string"}},
+    "whyDistractorsAreWrong": {"type": "object"},
+    "commonMistakes": {"type": "array", "items": {"type": "string"}},
+    "prerequisites": {"type": "array", "items": {"type": "string"}},
+    "relatedKnowledge": {"type": "array", "items": {"type": "string"}},
+    "sourceType": {
+      "type": "string",
+      "enum": ["official-public", "licensed-or-summarized", "original-simulation", "ai-variant"]
+    },
+    "sourceTitle": {"type": "string"},
+    "sourceUrl": {"type": "string", "format": "uri"},
+    "legalBasis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "article": {"type": "string"},
+          "url": {"type": "string", "format": "uri"}
+        }
+      }
+    },
+    "policyVersion": {"type": "string"},
+    "effectiveFrom": {"type": ["string", "null"], "format": "date"},
+    "effectiveTo": {"type": ["string", "null"], "format": "date"},
+    "verificationStatus": {
+      "type": "string",
+      "enum": ["discovered", "parsed", "rule_checked", "answer_checked", "ready", "deprecated", "needs_review"]
+    },
+    "generatedByAI": {"type": "boolean", "default": false},
+    "variantOf": {"type": ["string", "null"]},
+    "tags": {"type": "array", "items": {"type": "string"}}
+  }
+}
