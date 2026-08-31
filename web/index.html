@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>税务师学习+</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">税务师学习+ · V0.1</p>
+        <h1>把复杂税法，拆成每天能完成的学习任务</h1>
+        <p class="sub">主动回忆 × 间隔重复 × 费曼学习 × 第一性原理 × 交错训练</p>
+      </div>
+      <div class="score-card">
+        <span>今日完成度</span>
+        <strong id="progressText">0%</strong>
+        <div class="progress"><i id="progressBar"></i></div>
+      </div>
+    </header>
+
+    <section class="toolbar card">
+      <label>科目
+        <select id="subjectSelect">
+          <option value="all">全部</option>
+          <option value="tax1">税法一</option>
+          <option value="tax2">税法二</option>
+        </select>
+      </label>
+      <label>学习时段
+        <select id="sessionSelect">
+          <option value="dawn">清晨记忆</option>
+          <option value="morning">上午理解</option>
+          <option value="noon">中午主动回忆</option>
+          <option value="evening">晚间综合训练</option>
+        </select>
+      </label>
+      <button id="generateBtn">生成今日任务</button>
+    </section>
+
+    <section class="grid">
+      <aside class="card plan">
+        <h2>今日学习计划</h2>
+        <div id="planList"></div>
+      </aside>
+
+      <section class="card quiz">
+        <div class="quiz-head">
+          <div>
+            <span id="qMeta" class="pill">原创仿真题</span>
+            <h2 id="qTitle">点击“生成今日任务”开始</h2>
+          </div>
+          <span id="qIndex">0 / 0</span>
+        </div>
+        <p id="qStem" class="stem">系统会根据时段和科目，分配记忆、理解、计算与综合题。</p>
+        <div id="options" class="options"></div>
+        <div class="actions">
+          <button id="submitBtn" disabled>提交答案</button>
+          <button id="nextBtn" class="ghost" disabled>下一题</button>
+        </div>
+        <div id="explanation" class="explanation hidden"></div>
+      </section>
+    </section>
+
+    <section class="card method">
+      <h2>学习引擎</h2>
+      <div class="method-grid">
+        <article><b>第一性原理</b><span>从纳税人、征税对象、税基、税率、优惠、时间、地点重新推导规则。</span></article>
+        <article><b>主动回忆</b><span>先答再看，避免“看懂了=会了”的错觉。</span></article>
+        <article><b>费曼法</b><span>用自己的话解释规则，再由系统检查遗漏。</span></article>
+        <article><b>间隔重复</b><span>根据掌握度安排下次出现时间，而不是机械重复。</span></article>
+        <article><b>交错训练</b><span>混合相似税种和易混规则，训练辨别力。</span></article>
+        <article><b>错因追踪</b><span>区分税率错、税基错、时间错、优惠错、计算错和审题错。</span></article>
+      </div>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
