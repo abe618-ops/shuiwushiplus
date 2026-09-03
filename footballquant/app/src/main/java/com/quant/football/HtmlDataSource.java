@@ -2,10 +2,11 @@ package com.quant.football;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +16,43 @@ import java.util.regex.Pattern;
 public class HtmlDataSource {
     public static final String JC_URL="https://trade.500.com/jczq/?date=%s";
     public static final String BJ_URL="https://trade.500.com/bjdc/";
-    public String get(String url,String referer) throws Exception {HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();c.setConnectTimeout(10000);c.setReadTimeout(12000);c.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 16) FootballQuant/7.1");c.setRequestProperty("Accept","text/html,application/json;q=0.9,*/*;q=0.8");if(referer!=null)c.setRequestProperty("Referer",referer);BufferedReader br=new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8));StringBuilder b=new StringBuilder();String s;while((s=br.readLine())!=null)b.append(s).append('\n');br.close();return b.toString();}
+
+    public String get(String url,String referer) throws Exception {
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setConnectTimeout(10000);c.setReadTimeout(12000);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 16) FootballQuant/7.1");
+        c.setRequestProperty("Accept","text/html,application/json;q=0.9,*/*;q=0.8");
+        if(referer!=null)c.setRequestProperty("Referer",referer);
+        InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream();
+        byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);in.close();
+        byte[] raw=out.toByteArray();
+        Charset cs=detectCharset(c.getContentType(),raw,url);
+        String s=new String(raw,cs);
+        // 500 系页面历史上存在 GBK/GB2312/GB18030；若服务器未声明或声明错误，UTF-8 解码会出现 �。
+        if(s.indexOf('\uFFFD')>=0 && url.contains("500.com")){
+            try{s=new String(raw,Charset.forName("GB18030"));}catch(Exception ignored){}
+        }
+        return s;
+    }
+
+    private static Charset detectCharset(String contentType,byte[] raw,String url){
+        String declared=charsetToken(contentType);
+        if(declared!=null){try{return Charset.forName(declared);}catch(Exception ignored){}}
+        // HTML meta 标签本身由 ASCII 字符组成，可以先按 ISO-8859-1 扫描前 8KB。
+        int len=Math.min(raw.length,8192);
+        String head=new String(raw,0,len,StandardCharsets.ISO_8859_1);
+        Matcher m=Pattern.compile("(?i)charset\\s*=\\s*[\\\"']?([a-zA-Z0-9._-]+)").matcher(head);
+        if(m.find()){try{return Charset.forName(m.group(1));}catch(Exception ignored){}}
+        // 500.com 的旧页面通常是 GBK 系；体彩 JSON/API 默认 UTF-8。
+        if(url.contains("500.com")){try{return Charset.forName("GB18030");}catch(Exception ignored){}}
+        return StandardCharsets.UTF_8;
+    }
+    private static String charsetToken(String contentType){
+        if(contentType==null)return null;
+        Matcher m=Pattern.compile("(?i)charset\\s*=\\s*[\\\"']?([^;\\s\\\"']+)").matcher(contentType);
+        return m.find()?m.group(1):null;
+    }
+
     public List<MatchInfo> fetchJc(String override,String day) throws Exception {String u=(override==null||override.trim().isEmpty())?String.format(JC_URL,day):(override.contains("{date}")?override.replace("{date}",day):override);List<MatchInfo> x=parse500(get(u,"https://trade.500.com/"),"JC",day);enrichSporttery(x);return x;}
     public List<MatchInfo> fetchBj(String override,String day) throws Exception {String u=(override==null||override.trim().isEmpty())?BJ_URL:(override.contains("{date}")?override.replace("{date}",day):override);return parse500(get(u,"https://trade.500.com/"),"BJ",day);}
     public List<MatchInfo> fetchResults(boolean bj,String day) throws Exception {return bj?fetchBj("",day):fetchJc("",day);}
