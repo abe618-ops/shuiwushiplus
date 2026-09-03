@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.quant.football'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.quant.football.goals.v70.skillfusion'
+        minSdk 26
+        targetSdk 36
+        versionCode 11
+        versionName '0.7.1-0903-DualSport-SkillFusion'
+    }
+    buildTypes { release { minifyEnabled false } }
+}
