@@ -1,0 +1,41 @@
+name: Build Basketball Random Total APK
+
+on:
+  push:
+    branches:
+      - basketball-random-total-apk-v1
+    paths:
+      - 'basketball-random-total-apk/**'
+      - '.github/workflows/basketball-random-total-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build debug APK
+        working-directory: basketball-random-total-apk
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Prepare artifact
+        run: |
+          cp basketball-random-total-apk/app/build/outputs/apk/debug/app-debug.apk BasketballRandomTotal-v1.0.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BasketballRandomTotal-v1.0
+          path: BasketballRandomTotal-v1.0.apk
+          if-no-files-found: error
