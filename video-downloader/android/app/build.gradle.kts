@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.mingyang.videodownloader"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
         versionCode = 200
         versionName = "2.0.0"
