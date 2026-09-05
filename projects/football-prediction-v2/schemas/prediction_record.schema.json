@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FootballPredictionRecord",
+  "type": "object",
+  "required": ["match_id", "kickoff_utc", "freeze_time", "model_version", "inputs", "outputs", "locked"],
+  "properties": {
+    "match_id": {"type": "string"},
+    "competition": {"type": "string"},
+    "season": {"type": "string"},
+    "home": {"type": "string"},
+    "away": {"type": "string"},
+    "kickoff_utc": {"type": "string", "format": "date-time"},
+    "freeze_time": {"type": "string", "format": "date-time"},
+    "model_version": {"type": "string"},
+    "locked": {"const": true},
+    "inputs": {
+      "type": "object",
+      "properties": {
+        "market_snapshots": {"type": "array"},
+        "team_features": {"type": "object"},
+        "lineup_injuries": {"type": "object"},
+        "context": {"type": "object"},
+        "source_manifest": {"type": "array"}
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "market_layer": {"type": "object"},
+        "stat_layer": {"type": "object"},
+        "fundamental_layer": {"type": "object"},
+        "shadow_layers": {"type": "array"},
+        "final_probabilities": {
+          "type": "object",
+          "properties": {
+            "home": {"type": "number", "minimum": 0, "maximum": 1},
+            "draw": {"type": "number", "minimum": 0, "maximum": 1},
+            "away": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        },
+        "distribution_class": {"enum": ["顺分布", "逆分布", "隐分布", "均衡分布", "未分类"]},
+        "market_structure": {"enum": ["实盘", "诱盘", "阻盘", "韬盘", "混合", "未分类"]},
+        "pick_1x2": {"enum": ["主胜", "平", "客胜", "弃权"]},
+        "asian_pick": {"type": "string"},
+        "totals_pick": {"type": "string"},
+        "goal_range": {"type": "string"},
+        "odd_even": {"enum": ["单", "双", "弃权"]},
+        "four_class": {"enum": ["小单", "小双", "大单", "大双", "弃权"]},
+        "top_scores": {"type": "array"},
+        "half_full": {"type": "string"},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "abstain_reason": {"type": ["string", "null"]}
+      }
+    },
+    "postmatch": {
+      "type": "object",
+      "properties": {
+        "home_goals": {"type": "integer", "minimum": 0},
+        "away_goals": {"type": "integer", "minimum": 0},
+        "result_1x2": {"enum": ["主胜", "平", "客胜"]},
+        "metrics": {"type": "object"},
+        "error_tags": {"type": "array", "items": {"type": "string"}},
+        "review_notes": {"type": "string"}
+      }
+    }
+  }
+}
