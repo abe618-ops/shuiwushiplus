@@ -88,3 +88,5 @@ Settings: network policy, cache, risk confirmations, optional GitHub sign-in lat
 5. Risk panel and source/license metadata.
 6. GitHub Actions signed debug/release APK build.
 7. Shared platform resolver for future DMG/PKG/EXE/MSI/DEB/RPM/AppImage clients.
+
+Build trigger: 2026-09-06.
