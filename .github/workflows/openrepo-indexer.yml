@@ -2,6 +2,10 @@ name: Refresh OpenRepo Android APK Index
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/openrepo-indexer.yml'
   schedule:
     - cron: '23 */6 * * *'
 
