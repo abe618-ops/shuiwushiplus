@@ -17,10 +17,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
+import kotlin.math.ln
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +43,8 @@ data class RepoCandidate(
     val topics: List<String>,
     val htmlUrl: String,
     val updatedAt: String,
-    var baseScore: Double = 0.0
+    var baseScore: Double = 0.0,
+    var androidSignal: Int = 0
 )
 
 data class StoreApp(
@@ -59,14 +62,23 @@ data class StoreApp(
     val reason: String
 )
 
+data class SearchOutcome(
+    val apps: List<StoreApp>,
+    val candidateCount: Int,
+    val checkedCount: Int,
+    val noApkCount: Int,
+    val apiErrorCount: Int,
+    val expandedTerms: List<String>
+)
+
 private val http = OkHttpClient.Builder()
     .connectTimeout(12, TimeUnit.SECONDS)
     .readTimeout(20, TimeUnit.SECONDS)
-    .callTimeout(25, TimeUnit.SECONDS)
+    .callTimeout(30, TimeUnit.SECONDS)
     .build()
 
 private val conceptMap = linkedMapOf(
-    "视频下载" to listOf("video downloader", "media downloader", "yt-dlp", "stream downloader"),
+    "视频下载" to listOf("video downloader", "media downloader", "yt-dlp", "youtube downloader"),
     "下载器" to listOf("downloader", "download manager", "media downloader"),
     "输入法" to listOf("keyboard", "input method", "IME", "voice keyboard"),
     "剪贴板" to listOf("clipboard", "clipboard sync", "cross device clipboard"),
@@ -104,29 +116,32 @@ private fun expandQuery(raw: String): List<String> {
     }
     if (q.contains("安卓", true) || q.contains("Android", true)) expansions += "android app"
     if (q.contains("AI", true) || q.contains("人工智能", true)) expansions += listOf("AI assistant", "LLM", "machine learning")
-    return expansions.take(5)
+    return expansions.take(6)
 }
 
-private fun getJson(url: String): JSONObject {
+private fun requestText(url: String): String {
     val request = Request.Builder()
         .url(url)
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", "2022-11-28")
-        .header("User-Agent", "OpenRepo-Store/0.2")
+        .header("User-Agent", "OpenRepo-Store/0.3")
         .build()
     http.newCall(request).execute().use { response ->
         val body = response.body?.string().orEmpty()
         if (!response.isSuccessful) {
-            val msg = try { JSONObject(body).optString("message") } catch (_: Exception) { body.take(160) }
+            val msg = try { JSONObject(body).optString("message") } catch (_: Exception) { body.take(180) }
             throw IllegalStateException("GitHub ${response.code}: $msg")
         }
-        return JSONObject(body)
+        return body
     }
 }
 
-private fun repositorySearch(term: String, perPage: Int = 12): List<RepoCandidate> {
-    val encoded = URLEncoder.encode("$term in:name,description,readme archived:false", StandardCharsets.UTF_8.toString())
-    val json = getJson("https://api.github.com/search/repositories?q=$encoded&sort=stars&order=desc&per_page=$perPage")
+private fun getObject(url: String): JSONObject = JSONObject(requestText(url))
+private fun getArray(url: String): JSONArray = JSONArray(requestText(url))
+
+private fun repositorySearch(query: String, perPage: Int): List<RepoCandidate> {
+    val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8.toString())
+    val json = getObject("https://api.github.com/search/repositories?q=$encoded&sort=stars&order=desc&per_page=$perPage")
     val items = json.optJSONArray("items") ?: return emptyList()
     return buildList {
         for (i in 0 until items.length()) {
@@ -135,15 +150,19 @@ private fun repositorySearch(term: String, perPage: Int = 12): List<RepoCandidat
             val topics = buildList {
                 if (topicsJson != null) for (j in 0 until topicsJson.length()) add(topicsJson.optString(j))
             }
+            val description = o.optString("description")
+            val combined = (o.optString("name") + " " + description + " " + topics.joinToString(" ")).lowercase()
+            val signal = listOf("android", "apk", "kotlin", "mobile", "compose").count { combined.contains(it) }
             add(
                 RepoCandidate(
                     name = o.optString("name"),
                     fullName = o.optString("full_name"),
-                    description = o.optString("description"),
+                    description = description,
                     stars = o.optInt("stargazers_count"),
                     topics = topics,
                     htmlUrl = o.optString("html_url"),
-                    updatedAt = o.optString("updated_at")
+                    updatedAt = o.optString("updated_at"),
+                    androidSignal = signal
                 )
             )
         }
@@ -161,7 +180,7 @@ private fun relevanceScore(repo: RepoCandidate, rawQuery: String): Pair<Double, 
     val name = repo.name.lowercase()
     val desc = repo.description.lowercase()
     val topics = repo.topics.joinToString(" ").lowercase()
-    var score = repo.baseScore
+    var score = repo.baseScore + repo.androidSignal * 16.0
     val reasons = mutableListOf<String>()
 
     if (name.contains(q) || repo.fullName.lowercase().contains(q)) {
@@ -169,78 +188,126 @@ private fun relevanceScore(repo: RepoCandidate, rawQuery: String): Pair<Double, 
     }
     val descHits = tokens.count { desc.contains(it) }
     if (descHits > 0) {
-        score += descHits * 11; reasons += "简介相关"
+        score += descHits * 10; reasons += "简介相关"
     }
     val topicHits = tokens.count { topics.contains(it) }
     if (topicHits > 0) {
         score += topicHits * 14; reasons += "Topics 相关"
     }
-    score += kotlin.math.ln(repo.stars.toDouble() + 1.0) * 2.2
+    if (repo.androidSignal > 0) reasons += "Android 信号"
+    score += ln(repo.stars.toDouble() + 1.0) * 2.0
     return score to reasons.distinct().joinToString(" · ").ifBlank { "语义扩展命中" }
 }
 
-private fun latestApk(repo: RepoCandidate, rawQuery: String): StoreApp? {
-    val release = try { getJson("https://api.github.com/repos/${repo.fullName}/releases/latest") } catch (_: Exception) { return null }
-    if (release.optBoolean("draft") || release.optBoolean("prerelease")) return null
-    val assets = release.optJSONArray("assets") ?: return null
-    var selected: JSONObject? = null
-    for (i in 0 until assets.length()) {
-        val a = assets.getJSONObject(i)
-        val n = a.optString("name")
-        if (n.endsWith(".apk", ignoreCase = true)) {
-            if (selected == null || (!n.contains("debug", true) && selected!!.optString("name").contains("debug", true))) selected = a
+private fun findApkInRecentReleases(repo: RepoCandidate, rawQuery: String): StoreApp? {
+    val releases = getArray("https://api.github.com/repos/${repo.fullName}/releases?per_page=6")
+    var prereleaseFallback: StoreApp? = null
+
+    for (i in 0 until releases.length()) {
+        val release = releases.getJSONObject(i)
+        if (release.optBoolean("draft")) continue
+        val assets = release.optJSONArray("assets") ?: continue
+        var selected: JSONObject? = null
+        for (j in 0 until assets.length()) {
+            val a = assets.getJSONObject(j)
+            val n = a.optString("name")
+            if (!n.endsWith(".apk", ignoreCase = true)) continue
+            val isBad = n.contains("source", true) || n.contains("mapping", true) || n.contains("unsigned", true)
+            if (isBad) continue
+            if (selected == null) selected = a
+            if (!n.contains("debug", true) && !n.contains("test", true)) {
+                selected = a
+                break
+            }
         }
+        val apk = selected ?: continue
+        val (score, reason) = relevanceScore(repo, rawQuery)
+        val app = StoreApp(
+            name = repo.name,
+            repo = repo.fullName,
+            description = repo.description.ifBlank { "该项目未提供仓库简介，可打开项目页面查看 README。" },
+            version = release.optString("tag_name"),
+            apkName = apk.optString("name"),
+            apkSize = apk.optLong("size"),
+            downloadUrl = apk.optString("browser_download_url"),
+            releaseUrl = release.optString("html_url"),
+            stars = repo.stars,
+            topics = repo.topics,
+            score = score + if (release.optBoolean("prerelease")) -15 else 8,
+            reason = reason + if (release.optBoolean("prerelease")) " · 预发布版" else " · 稳定 Release"
+        )
+        if (!release.optBoolean("prerelease")) return app
+        if (prereleaseFallback == null) prereleaseFallback = app
     }
-    val apk = selected ?: return null
-    val (score, reason) = relevanceScore(repo, rawQuery)
-    return StoreApp(
-        name = repo.name,
-        repo = repo.fullName,
-        description = repo.description.ifBlank { "该项目未提供仓库简介，可打开项目页面查看 README。" },
-        version = release.optString("tag_name"),
-        apkName = apk.optString("name"),
-        apkSize = apk.optLong("size"),
-        downloadUrl = apk.optString("browser_download_url"),
-        releaseUrl = release.optString("html_url"),
-        stars = repo.stars,
-        topics = repo.topics,
-        score = score,
-        reason = reason
-    )
+    return prereleaseFallback
 }
 
-private suspend fun twoLayerSearch(rawQuery: String): List<StoreApp> = withContext(Dispatchers.IO) {
+private suspend fun discoverApps(rawQuery: String): SearchOutcome = withContext(Dispatchers.IO) {
     val expanded = expandQuery(rawQuery)
-    if (expanded.isEmpty()) return@withContext emptyList()
+    if (expanded.isEmpty()) return@withContext SearchOutcome(emptyList(), 0, 0, 0, 0, emptyList())
 
     val merged = linkedMapOf<String, RepoCandidate>()
 
-    // Layer 1: GitHub official search using the user's original query.
-    repositorySearch(expanded.first(), 12).forEachIndexed { index, repo ->
-        repo.baseScore = 32.0 - index
-        merged[repo.fullName] = repo
-    }
-
-    // Layer 2: bilingual semantic expansion. Search name + description + README, then fuse candidates.
-    expanded.drop(1).take(3).forEachIndexed { qIndex, term ->
-        repositorySearch(term, 8).forEachIndexed { index, repo ->
-            val semanticBonus = 22.0 - qIndex * 3.0 - index * 0.4
-            val existing = merged[repo.fullName]
-            if (existing == null) {
-                repo.baseScore = semanticBonus
+    fun addBatch(batch: List<RepoCandidate>, base: Double) {
+        batch.forEachIndexed { index, repo ->
+            val bonus = base - index * 0.5
+            val old = merged[repo.fullName]
+            if (old == null) {
+                repo.baseScore = bonus
                 merged[repo.fullName] = repo
             } else {
-                existing.baseScore += semanticBonus
+                old.baseScore += bonus * 0.55
+                old.androidSignal = maxOf(old.androidSignal, repo.androidSignal)
             }
         }
     }
 
-    merged.values
-        .map { repo -> repo to relevanceScore(repo, rawQuery).first }
+    // Layer 1: user's original intent, normal GitHub repository search.
+    addBatch(repositorySearch("${expanded.first()} in:name,description,readme archived:false", 15), 35.0)
+
+    // Layer 2a: bilingual semantic expansions, but force Android/mobile context.
+    expanded.drop(1).take(3).forEachIndexed { idx, term ->
+        addBatch(repositorySearch("$term android in:name,description,readme archived:false", 10), 30.0 - idx * 2)
+    }
+
+    // Layer 2b: explicit APK/Android-focused searches. This prevents desktop/CLI repos from filling the shortlist.
+    val strongTerms = expanded.drop(1).ifEmpty { expanded }.take(2)
+    strongTerms.forEachIndexed { idx, term ->
+        addBatch(repositorySearch("$term apk android archived:false", 10), 34.0 - idx * 2)
+        addBatch(repositorySearch("$term topic:android archived:false", 8), 32.0 - idx * 2)
+    }
+
+    val ranked = merged.values
+        .map { it to relevanceScore(it, rawQuery).first }
         .sortedByDescending { it.second }
-        .take(14)
-        .mapNotNull { latestApk(it.first, rawQuery) }
-        .sortedByDescending { it.score }
+        .map { it.first }
+        .take(28)
+
+    val apps = mutableListOf<StoreApp>()
+    var checked = 0
+    var noApk = 0
+    var apiErrors = 0
+
+    for (repo in ranked) {
+        if (apps.size >= 12) break
+        checked++
+        try {
+            val app = findApkInRecentReleases(repo, rawQuery)
+            if (app != null) apps += app else noApk++
+        } catch (e: Exception) {
+            apiErrors++
+            if (e.message?.contains("rate limit", true) == true || e.message?.contains("403") == true) break
+        }
+    }
+
+    SearchOutcome(
+        apps = apps.sortedByDescending { it.score },
+        candidateCount = merged.size,
+        checkedCount = checked,
+        noApkCount = noApk,
+        apiErrorCount = apiErrors,
+        expandedTerms = expanded
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -250,6 +317,7 @@ fun StoreScreen(onOpen: (String) -> Unit) {
     var results by remember { mutableStateOf<List<StoreApp>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("输入中文或英文功能描述，例如：视频下载、剪贴板同步、RSS 阅读器") }
+    var debugLine by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
     fun search() {
@@ -257,19 +325,25 @@ fun StoreScreen(onOpen: (String) -> Unit) {
         if (q.isEmpty() || loading) return
         loading = true
         results = emptyList()
-        message = "正在进行 GitHub 官方搜索 + 中英文语义扩展检索…"
+        debugLine = ""
+        message = "正在检索 GitHub，并优先筛选 Android / APK 项目…"
         scope.launch {
             try {
-                val found = twoLayerSearch(q)
-                results = found
-                message = if (found.isEmpty()) {
-                    "搜索完成，但候选项目中没有发现最新 Release 含 APK 的项目。可换一个更宽泛的功能描述。"
+                val outcome = discoverApps(q)
+                results = outcome.apps
+                debugLine = "候选 ${outcome.candidateCount} · 已检查 ${outcome.checkedCount} · 无 APK ${outcome.noApkCount} · API 错误 ${outcome.apiErrorCount}"
+                message = if (outcome.apps.isEmpty()) {
+                    if (outcome.apiErrorCount > 0) {
+                        "没有得到可展示 APK；部分 GitHub 请求失败或触发未登录额度限制。"
+                    } else {
+                        "已搜索相关仓库，但最近 6 条 Release 中未发现可安装 APK。建议换更宽泛的功能词。"
+                    }
                 } else {
-                    "找到 ${found.size} 个可直接安装 APK 的项目，已按综合相关性排序"
+                    "找到 ${outcome.apps.size} 个带 APK 的项目。语义扩展：${outcome.expandedTerms.drop(1).take(3).joinToString(" / ").ifBlank { "无需扩展" }}"
                 }
             } catch (e: Exception) {
                 message = when {
-                    e.message?.contains("rate limit", true) == true -> "GitHub 未登录 API 限流，请稍后再试。后续版本会加入 GitHub OAuth 提升额度。"
+                    e.message?.contains("rate limit", true) == true || e.message?.contains("403") == true -> "GitHub 未登录 API 已限流。请稍后重试；下一步会加入 GitHub 登录提升额度。"
                     else -> "搜索失败：${e.message ?: "网络或 GitHub API 异常"}"
                 }
             } finally {
@@ -278,7 +352,7 @@ fun StoreScreen(onOpen: (String) -> Unit) {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("OpenRepo Store") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("OpenRepo Store 0.3") }) }) { padding ->
         Column(Modifier.padding(padding).padding(14.dp)) {
             OutlinedTextField(
                 value = query,
@@ -292,10 +366,14 @@ fun StoreScreen(onOpen: (String) -> Unit) {
                 Button(onClick = { search() }, enabled = !loading) {
                     Text(if (loading) "检索中…" else "双层检索")
                 }
-                AssistChip(onClick = {}, label = { Text("仅显示 APK") })
+                AssistChip(onClick = {}, label = { Text("Android + APK") })
             }
             Spacer(Modifier.height(8.dp))
             Text(message, style = MaterialTheme.typography.bodySmall)
+            if (debugLine.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(debugLine, style = MaterialTheme.typography.labelSmall)
+            }
             Spacer(Modifier.height(10.dp))
 
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -309,6 +387,7 @@ fun StoreScreen(onOpen: (String) -> Unit) {
                             Spacer(Modifier.height(6.dp))
                             Text("相关原因：${app.reason}", style = MaterialTheme.typography.labelMedium)
                             Text("★ ${app.stars} · ${app.version} · ${formatBytes(app.apkSize)}", style = MaterialTheme.typography.bodySmall)
+                            Text(app.apkName, style = MaterialTheme.typography.bodySmall)
                             if (app.topics.isNotEmpty()) Text(app.topics.take(5).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(8.dp))
                             Text("风险提示：GitHub 托管不代表 GitHub 或 OpenRepo 已审核该 APK。安装前请确认发布者、权限与签名。", style = MaterialTheme.typography.bodySmall)
