@@ -108,6 +108,42 @@ Basketball maintains:
 
 Do not add all these boards into one meaningless grand total. Each market/output has its own ensemble result.
 
+## Blind-validation priority metrics
+
+For the iterative blind-test loop, use the following evaluation priority so that useful specialist signals are not hidden by one coarse overall accuracy number.
+
+### Football priority
+1. `total`: total-goals over/under. Primary judgment uses the actual pre-match market total line when available; also log a standardized 2.5-goal audit label for cross-match comparison.
+2. `odd_even`: odd/even of the final total number of goals.
+3. `result`: 1X2.
+4. `handicap`: line-specific handicap outcome when a frozen pre-match line is available.
+5. `score_shape`, exact-score Top-K and HT/FT as secondary diagnostic outputs.
+
+For each football round, freeze both the line and the prediction. If the market line is 2.75/3.0/3.25, score the actual line according to its own push/half-win structure, while the standardized 2.5 label remains a separate research metric.
+
+### Basketball priority
+1. `total`: final combined-score over/under against the frozen pre-match total line. This is the primary basketball target.
+2. `handicap`: spread-cover result against the frozen pre-match spread; record pushes separately.
+3. `result`: moneyline winner as a supporting target.
+4. `margin_band` and projected score interval as diagnostics.
+
+Never compare a prediction against a closing line that was not available at prediction time. Each round records the exact total/spread snapshot used.
+
+## Iterative blind-test protocol
+
+Run rounds sequentially rather than tuning all matches at once:
+
+1. Randomly select an eligible historical match without using its final score as a feature.
+2. Lock match identity, kickoff, pre-match data, odds/lines, divination setup time, model/rule versions and seed.
+3. Generate every method's multidimensional internal votes.
+4. Freeze the cross-method vote boards and quantitative/market outputs.
+5. Only after the prediction artifact is frozen, reveal the final score/result.
+6. Score football total + odd/even first; score basketball total + spread first; then score secondary targets.
+7. Attribute errors to method × derivation × output dimension rather than declaring a whole method right/wrong.
+8. Modify only pre-registered rule weights/thresholds justified by accumulated earlier rounds. Never repair the just-finished prediction retroactively.
+9. Version the model before the next round.
+10. After 5 rounds, do an exploratory review; after 10 rounds, compare V1/V2/V3 chronologically. Treat 5–10 matches as pilot evidence only, not proof of predictive validity.
+
 ## Voting policy
 
 ### Stage 1 — internal method vote
@@ -134,7 +170,8 @@ For one method + one dimension:
 ## Football outputs
 - 1X2 probability and display direction
 - handicap probability if line supplied
-- totals distribution
+- totals distribution and line-specific over/under
+- standardized 2.5-goal over/under audit label
 - odd/even
 - score Top-3 and coverage
 - HT/FT
@@ -159,8 +196,8 @@ Until a method passes chronological out-of-sample validation for the specific ou
 Validated coefficients must be estimated on past data only. The challenger must improve the relevant proper score or error metric in multiple future windows before promotion.
 
 ## Review metrics
-Football: accuracy, Brier, LogLoss, calibration, goal MAE, score Top-K coverage, handicap/totals hit rate where legally appropriate for research.
-Basketball: winner Brier/LogLoss, margin MAE/RMSE, total MAE/RMSE, spread/total calibration.
+Football: total-line hit/push/half result, standardized O/U 2.5 accuracy, odd/even accuracy, 1X2 accuracy/Brier/LogLoss, calibration, goal MAE, score Top-K coverage and handicap metrics when a valid line exists.
+Basketball: total-line hit/push, spread-cover hit/push, winner Brier/LogLoss, margin MAE/RMSE, total MAE/RMSE and spread/total calibration.
 
 Additionally maintain a matrix:
 `method × derivation × output dimension × sample class × hit/proper-score contribution`
