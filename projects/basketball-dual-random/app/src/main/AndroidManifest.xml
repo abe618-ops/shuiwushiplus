@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:allowBackup="true" android:label="双维起盘" android:theme="@style/Theme.DualRandom">
+    <application
+        android:allowBackup="true"
+        android:label="阴阳篮球"
+        android:icon="@drawable/ic_yinyang_basketball"
+        android:roundIcon="@drawable/ic_yinyang_basketball"
+        android:theme="@style/Theme.DualRandom">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
