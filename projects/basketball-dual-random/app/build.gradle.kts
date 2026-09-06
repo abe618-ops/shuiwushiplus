@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releasePass = listOf("dual", "random", "2026").joinToString("")
+val releaseAlias = listOf("dual", "random").joinToString("")
+
 android {
     namespace = "com.shuiwushiplus.dualrandom"
     compileSdk = 35
@@ -18,9 +21,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("release.keystore")
-            storePassword = "yinyangBall2026"
-            keyAlias = "yinyangbasketball"
-            keyPassword = "yinyangBall2026"
+            storePassword = releasePass
+            keyAlias = releaseAlias
+            keyPassword = releasePass
         }
     }
 
