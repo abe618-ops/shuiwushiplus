@@ -16,8 +16,11 @@ jobs:
     steps:
       - name: Ensure Android SDK 35
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.1"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKM" ]; then SDKM=$(find "$ANDROID_HOME" -type f -name sdkmanager | head -n1); fi
+          echo "sdkmanager=$SDKM"
+          yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+          "$SDKM" "platforms;android-35" "build-tools;35.0.1"
       - name: Pack minimal SDK
         run: |
           mkdir -p p2p-sdk/platforms/android-35 p2p-sdk/build-tools/35.0.1
