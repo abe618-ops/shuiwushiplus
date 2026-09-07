@@ -1,0 +1,33 @@
+name: P2P SDK Export
+
+on:
+  push:
+    branches: [ p2p-searcher-v0.9.0-build ]
+    paths:
+      - '.github/workflows/p2p-sdk-export.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure Android SDK 35
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.1"
+      - name: Pack minimal SDK
+        run: |
+          mkdir -p p2p-sdk/platforms/android-35 p2p-sdk/build-tools/35.0.1
+          cp "$ANDROID_HOME/platforms/android-35/android.jar" p2p-sdk/platforms/android-35/
+          for f in aapt2 d8 zipalign apksigner; do cp -a "$ANDROID_HOME/build-tools/35.0.1/$f" p2p-sdk/build-tools/35.0.1/; done
+          cp -a "$ANDROID_HOME/build-tools/35.0.1/lib" p2p-sdk/build-tools/35.0.1/ || true
+          cp -a "$ANDROID_HOME/build-tools/35.0.1/lib64" p2p-sdk/build-tools/35.0.1/ || true
+      - name: Upload SDK bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2p-android-sdk35
+          path: p2p-sdk
+          retention-days: 1
