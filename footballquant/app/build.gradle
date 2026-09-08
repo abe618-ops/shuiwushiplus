@@ -4,11 +4,11 @@ android {
     namespace 'com.quant.football'
     compileSdk 36
     defaultConfig {
-        applicationId 'com.quant.football.goals.v70.skillfusion'
+        applicationId 'com.quant.football.fusion.v3'
         minSdk 26
         targetSdk 36
-        versionCode 12
-        versionName '0.7.1.1-0903-ChineseFix-CompactUI'
+        versionCode 30
+        versionName '3.0.0-football-fusion'
     }
     buildTypes { release { minifyEnabled false } }
 }
