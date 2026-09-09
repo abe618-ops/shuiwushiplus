@@ -1,8 +1,8 @@
-name: FootballQuant V4 MultiConsensus Android build
+name: FootballQuant V4 FreeDivination Android build
 
 on:
   push:
-    branches: [ football-fusion-v4-multiconsensus ]
+    branches: [ football-fusion-v4-free-divination ]
     paths:
       - 'footballquant/**'
       - '.github/workflows/footballquant-temp-build.yml'
@@ -23,11 +23,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build standalone V4 APK
+      - name: Create fresh standalone signing certificate
+        run: |
+          mkdir -p "$HOME/.android"
+          rm -f "$HOME/.android/debug.keystore"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=FootballQuant V4 FreeDivination 20260909,O=Standalone Blind Test,C=CN"
+      - name: Build FreeDivination APK
         run: gradle assembleDebug --stacktrace
-      - name: Show APK certificate
-        run: keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk || true
+      - name: Show fresh APK certificate
+        run: keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk
+      - name: Verify package id
+        run: |
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort | tail -1)
+          echo "Expected package: com.quant.football.fusion.v4.freecast"
+          echo "APK: app/build/outputs/apk/debug/app-debug.apk"
       - uses: actions/upload-artifact@v4
         with:
-          name: FootballQuant-V4-MultiConsensus-Standalone
+          name: FootballQuant-V4-FreeDivination-NewSignature
           path: footballquant/app/build/outputs/apk/debug/*.apk
