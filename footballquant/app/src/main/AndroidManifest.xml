@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:allowBackup="true"
-        android:label="FootballQuant V4 多重合参"
+        android:label="足球多重合参·自由占测 V4"
         android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
         <activity
-            android:name="com.quant.football.MainActivity"
+            android:name="com.quant.football.FreeDivinationActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
