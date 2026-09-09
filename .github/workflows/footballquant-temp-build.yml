@@ -1,8 +1,8 @@
-name: FootballQuant temp Android build
+name: FootballQuant V4 MultiConsensus Android build
 
 on:
   push:
-    branches: [ footballquant-temp ]
+    branches: [ football-fusion-v4-multiconsensus ]
     paths:
       - 'footballquant/**'
       - '.github/workflows/footballquant-temp-build.yml'
@@ -23,9 +23,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Build debug APK
+      - name: Build standalone V4 APK
         run: gradle assembleDebug --stacktrace
+      - name: Show APK certificate
+        run: keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk || true
       - uses: actions/upload-artifact@v4
         with:
-          name: FootballQuant-V7.1-DualSport-Standalone-debug
+          name: FootballQuant-V4-MultiConsensus-Standalone
           path: footballquant/app/build/outputs/apk/debug/*.apk
