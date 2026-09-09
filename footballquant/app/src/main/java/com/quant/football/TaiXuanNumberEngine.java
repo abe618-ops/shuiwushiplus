@@ -70,7 +70,7 @@ public final class TaiXuanNumberEngine {
         eb/=3.0;
 
         DayFeature df=dayFeature(day);
-        double sb=((df.stemNumber+df.branchNumber)-13.0)/5.0;
+        double sb=(df.stemNumber==0||df.branchNumber==0)?0:((df.stemNumber+df.branchNumber)-13.0)/5.0;
         if(sb>1)sb=1;if(sb<-1)sb=-1;
         return new Feature(number,state,trits,els.toString(),eb,tx,df.stem+df.branch,df.stemNumber,df.branchNumber,df.lu,sb,zero);
     }
