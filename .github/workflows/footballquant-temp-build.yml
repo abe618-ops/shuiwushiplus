@@ -34,13 +34,17 @@ jobs:
             -dname "CN=FootballQuant V4 FreeDivination 20260909,O=Standalone Blind Test,C=CN"
       - name: Build FreeDivination APK
         run: gradle assembleDebug --stacktrace
-      - name: Show fresh APK certificate
-        run: keytool -printcert -jarfile app/build/outputs/apk/debug/app-debug.apk
-      - name: Verify package id
+      - name: Verify APK signature and print certificate
         run: |
-          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort | tail -1)
-          echo "Expected package: com.quant.football.fusion.v4.freecast"
-          echo "APK: app/build/outputs/apk/debug/app-debug.apk"
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort | tail -1)
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+      - name: Verify actual package id
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AAPT=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort | tail -1)
+          "$AAPT" dump badging "$APK" | head -3
+          "$AAPT" dump badging "$APK" | grep -q "package: name='com.quant.football.fusion.v4.freecast'"
       - uses: actions/upload-artifact@v4
         with:
           name: FootballQuant-V4-FreeDivination-NewSignature
