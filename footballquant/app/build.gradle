@@ -4,18 +4,14 @@ android {
     namespace 'com.quant.football'
     compileSdk 36
     defaultConfig {
-        applicationId 'com.quant.football.fusion.v4.multiconsensus'
+        applicationId 'com.quant.football.fusion.v4.freecast'
         minSdk 26
         targetSdk 36
-        versionCode 41
-        versionName '4.0.0-multiconsensus'
+        versionCode 42
+        versionName '4.0.0-free-divination'
     }
     buildTypes {
-        debug {
-            minifyEnabled false
-        }
-        release {
-            minifyEnabled false
-        }
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
     }
 }
