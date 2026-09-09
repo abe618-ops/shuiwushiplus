@@ -3,9 +3,9 @@ package com.quant.football;
 import java.util.Locale;
 
 /**
- * V3 audit-safe divination adapter.
- * Only the legacy 3-digit Meihua mapping is currently marked reproducible here.
- * Other traditions are registered but never faked with a shared random vote.
+ * V4 audit-safe traditional adapter.
+ * Only reproducible implemented rules are allowed to report a real chart.
+ * Unimplemented traditions must never be replaced by shared random voting.
  */
 public class DivinationEngine {
     public static class Bundle {
@@ -22,7 +22,7 @@ public class DivinationEngine {
     public Bundle run(MatchInfo m,String day,String lockedSeed){
         Bundle b=new Bundle();
         b.notImplementedCount=9;
-        b.detail="V3 已停用旧版十门共用随机投票与奇偶反转。请使用 runDualNumbers(manual, auto) 进入可复演数字盘；六爻、奇门、大六壬、太乙等完整历法盘需各自适配器与所需时间/地点输入。";
+        b.detail="V4 不再使用十门共用伪随机投票。可复演数字层由 MultiConsensusEngine 负责；六爻、奇门、大六壬、太乙等完整历法盘需独立适配器与完整输入。";
         return b;
     }
 
@@ -48,8 +48,8 @@ public class DivinationEngine {
             b.insufficientCount++;
         }
         b.notImplementedCount=9;
-        d.append("其他术数：按独立适配器逐门实现；未实现时明确显示未实现，不生成伪盘。\n");
-        d.append("正式融合权重=").append(FusionV3Config.FORMAL_DIVINATION_WEIGHT).append("，待前瞻验证后再升级。");
+        d.append("其他术数：逐门独立适配；未实现显示未实现，不生成伪盘。\n");
+        d.append("正式传统层权重=").append(FusionV4Config.FORMAL_TRADITION_WEIGHT).append("，待前瞻验证晋级。");
         b.detail=d.toString();
         return b;
     }
@@ -59,6 +59,6 @@ public class DivinationEngine {
     }
 
     public static String summary(Bundle b){
-        return "术数V3：可复演"+b.reproducibleCount+"项 / 输入不足"+b.insufficientCount+"项 / 待实现"+b.notImplementedCount+"项";
+        return "术数V4：可复演"+b.reproducibleCount+"项 / 输入不足"+b.insufficientCount+"项 / 待独立适配"+b.notImplementedCount+"项";
     }
 }
