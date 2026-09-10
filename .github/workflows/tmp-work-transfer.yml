@@ -1,4 +1,4 @@
-name: Temporary APK Work Transfer
+name: Clean Temporary APK Work Transfer
 
 on:
   push:
@@ -6,24 +6,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  transfer:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Fetch APK from public release
+      - name: Remove temporary public release and branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download work-transfer-douyin-v1 --repo "$GITHUB_REPOSITORY" --pattern 'DouyinDownloader-Android-v1.0.0-arm64.apk' --dir .
-          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -eq 28738494
-          echo 'e858e62967704d2f4fe696fd91ba71a07a68ec192995eb0342fe9168254d8700  DouyinDownloader-Android-v1.0.0-arm64.apk' | sha256sum -c -
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: DouyinDownloader-Android-v1.0.0-arm64
-          path: DouyinDownloader-Android-v1.0.0-arm64.apk
-          retention-days: 1
-          compression-level: 0
+          gh release delete work-transfer-douyin-v1 --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag || true
+          gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/work-transfer" || true
