@@ -13,17 +13,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch short-lived APK
-        run: |
-          curl -fL --retry 3 --retry-delay 2 https://bashupload.app/yogsgz.bin -o DouyinDownloader-Android-v1.0.0-arm64.apk
-          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -gt 10000000
-          sha256sum DouyinDownloader-Android-v1.0.0-arm64.apk
-      - name: Publish temporary release
+        with:
+          fetch-depth: 0
+      - name: Fetch APK from temporary release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG=work-transfer-douyin-v1
-          gh release delete "$TAG" --yes --cleanup-tag || true
-          gh release create "$TAG" DouyinDownloader-Android-v1.0.0-arm64.apk \
-            --title "Temporary Douyin APK Work Transfer" \
-            --notes "Temporary transfer release."
+          gh release download work-transfer-douyin-v1 \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'DouyinDownloader-Android-v1.0.0-arm64.apk' \
+            --dir .
+          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -gt 10000000
+          sha256sum DouyinDownloader-Android-v1.0.0-arm64.apk
+      - name: Publish temporary transfer branch
+        run: |
+          mkdir /tmp/apk-transfer
+          cp DouyinDownloader-Android-v1.0.0-arm64.apk /tmp/apk-transfer/
+          git checkout --orphan work-transfer
+          git rm -rf .
+          cp /tmp/apk-transfer/DouyinDownloader-Android-v1.0.0-arm64.apk .
+          git add DouyinDownloader-Android-v1.0.0-arm64.apk
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'temp: APK transfer'
+          git push --force origin HEAD:work-transfer
