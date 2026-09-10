@@ -6,25 +6,24 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   transfer:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Fetch APK from temporary release
+      - name: Fetch APK from public release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download work-transfer-douyin-v1 --repo "$GITHUB_REPOSITORY" --pattern 'DouyinDownloader-Android-v1.0.0-arm64.apk' --dir .
-          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -gt 10000000
-          sha256sum DouyinDownloader-Android-v1.0.0-arm64.apk
-      - name: Prepare text transfer probe
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          printf 'douyin-work-transfer-ok\n' > work-transfer-probe.txt
-          gh release upload work-transfer-douyin-v1 work-transfer-probe.txt --clobber --repo "$GITHUB_REPOSITORY"
+          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -eq 28738494
+          echo 'e858e62967704d2f4fe696fd91ba71a07a68ec192995eb0342fe9168254d8700  DouyinDownloader-Android-v1.0.0-arm64.apk' | sha256sum -c -
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DouyinDownloader-Android-v1.0.0-arm64
+          path: DouyinDownloader-Android-v1.0.0-arm64.apk
+          retention-days: 1
+          compression-level: 0
