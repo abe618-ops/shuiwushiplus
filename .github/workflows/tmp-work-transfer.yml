@@ -1,0 +1,29 @@
+name: Temporary APK Work Transfer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  transfer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch short-lived APK
+        run: |
+          curl -fL --retry 3 --retry-delay 2 https://bashupload.app/yogsgz.bin -o DouyinDownloader-Android-v1.0.0-arm64.apk
+          test "$(stat -c%s DouyinDownloader-Android-v1.0.0-arm64.apk)" -gt 10000000
+          sha256sum DouyinDownloader-Android-v1.0.0-arm64.apk
+      - name: Publish temporary release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=work-transfer-douyin-v1
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" DouyinDownloader-Android-v1.0.0-arm64.apk \
+            --title "Temporary Douyin APK Work Transfer" \
+            --notes "Temporary transfer release."
