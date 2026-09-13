@@ -1,0 +1,45 @@
+name: Build Cezi Yanqin Football APK
+
+on:
+  push:
+    branches: [ "cezi-yanqin-football-v1" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build 7000-character offline asset
+        run: |
+          python3 cezi-yanqin-football/tools/build_char_asset.py
+          test "$(grep -vc '^#' cezi-yanqin-football/app/src/main/assets/char_meta.tsv)" = "7000"
+          head -n 3 cezi-yanqin-football/app/src/main/assets/char_meta.tsv
+          tail -n 2 cezi-yanqin-football/app/src/main/assets/char_meta.tsv
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: yes | sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build debug APK
+        run: gradle -p cezi-yanqin-football :app:assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: cp cezi-yanqin-football/app/build/outputs/apk/debug/app-debug.apk Cezi-Yanqin-Football-V1.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Cezi-Yanqin-Football-V1
+          path: Cezi-Yanqin-Football-V1.apk
+          retention-days: 30
