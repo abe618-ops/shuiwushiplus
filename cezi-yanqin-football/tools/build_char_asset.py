@@ -18,11 +18,35 @@ def fetch(url: str) -> bytes:
         return resp.read()
 
 
+def parse_json_stream(text: str):
+    """Accept a JSON array or a stream/JSONL of adjacent JSON objects."""
+    text = text.lstrip("\ufeff")
+    try:
+        data = json.loads(text)
+        return data if isinstance(data, list) else [data]
+    except json.JSONDecodeError:
+        dec = json.JSONDecoder()
+        out = []
+        pos = 0
+        n = len(text)
+        while pos < n:
+            while pos < n and (text[pos].isspace() or text[pos] in ",[]"):
+                pos += 1
+            if pos >= n:
+                break
+            obj, pos = dec.raw_decode(text, pos)
+            out.append(obj)
+        return out
+
+
 official_text = fetch(official_url).decode("utf-8")
-meta_data = json.loads(fetch(meta_url).decode("utf-8"))
+meta_text = fetch(meta_url).decode("utf-8")
+meta_data = parse_json_stream(meta_text)
 
 meta_by_char = {}
 for obj in meta_data:
+    if not isinstance(obj, dict):
+        continue
     ch = obj.get("char")
     if ch and ch not in meta_by_char:
         meta_by_char[ch] = obj
@@ -67,4 +91,4 @@ with OUT.open("w", encoding="utf-8", newline="\n") as f:
     for row in rows:
         f.write("\t".join(map(str, row)) + "\n")
 
-print(f"generated {OUT}: {len(rows)} characters")
+print(f"generated {OUT}: {len(rows)} characters; metadata records={len(meta_data)}")
