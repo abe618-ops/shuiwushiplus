@@ -1,0 +1,32 @@
+name: Build Meihua CeGui Football APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ meihua-cegui-football-v1 ]
+    paths:
+      - 'meihua-cegui-football/**'
+      - '.github/workflows/meihua-cegui-football-android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: meihua-cegui-football
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: meihua-cegui-football-v1-apk
+          path: meihua-cegui-football/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
