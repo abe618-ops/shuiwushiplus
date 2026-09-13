@@ -1,7 +1,7 @@
-name: Build FengJiao Random APK
+name: Build FengJiao V2 APK
 on:
   push:
-    branches: [ "fengjiao-random-apk-v1" ]
+    branches: [ "fengjiao-random-apk-v2" ]
   workflow_dispatch:
 
 jobs:
@@ -22,9 +22,9 @@ jobs:
       - name: Build debug APK
         run: gradle -p fengjiao-random-apk :app:assembleDebug --stacktrace
       - name: Rename APK
-        run: cp fengjiao-random-apk/app/build/outputs/apk/debug/app-debug.apk FengJiao-Random-V1.apk
+        run: cp fengjiao-random-apk/app/build/outputs/apk/debug/app-debug.apk FengJiao-Football-V2.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: FengJiao-Random-V1
-          path: FengJiao-Random-V1.apk
+          name: FengJiao-Football-V2
+          path: FengJiao-Football-V2.apk
           retention-days: 30
