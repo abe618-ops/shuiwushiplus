@@ -38,6 +38,21 @@ jobs:
       - name: Rename APK
         run: cp cezi-yanqin-football/app/build/outputs/apk/debug/app-debug.apk Cezi-Yanqin-Football-V1.apk
 
+      - name: Verify packaged app
+        run: |
+          set -euo pipefail
+          zipinfo -1 Cezi-Yanqin-Football-V1.apk | grep -q '^assets/char_meta.tsv$'
+          test "$(unzip -p Cezi-Yanqin-Football-V1.apk assets/char_meta.tsv | grep -vc '^#')" = "7000"
+          rm -rf /tmp/cezi-dex && mkdir -p /tmp/cezi-dex
+          (cd /tmp/cezi-dex && unzip -q "$GITHUB_WORKSPACE/Cezi-Yanqin-Football-V1.apk" 'classes*.dex')
+          for dex in /tmp/cezi-dex/classes*.dex; do strings "$dex"; done > /tmp/cezi-dex/strings.txt
+          grep -q 'Lcom/shuiwushi/cezi/MainActivity;' /tmp/cezi-dex/strings.txt
+          grep -q 'Lcom/shuiwushi/cezi/CeziEngine;' /tmp/cezi-dex/strings.txt
+          grep -q 'Lcom/shuiwushi/cezi/CharRepository;' /tmp/cezi-dex/strings.txt
+          grep -q 'Lcom/shuiwushi/cezi/GlyphAnalyzer;' /tmp/cezi-dex/strings.txt
+          echo 'APK verification passed: assets + app classes present.'
+          sha256sum Cezi-Yanqin-Football-V1.apk
+
       - uses: actions/upload-artifact@v4
         with:
           name: Cezi-Yanqin-Football-V1
