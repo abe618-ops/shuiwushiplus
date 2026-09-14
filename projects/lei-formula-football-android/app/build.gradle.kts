@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -29,8 +30,6 @@ android {
         jvmTarget = "17"
     }
 }
-
-plugins.apply("org.jetbrains.kotlin.android")
 
 dependencies {
     implementation("cn.6tail:lunar:1.7.7")
