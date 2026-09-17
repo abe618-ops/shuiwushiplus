@@ -14,6 +14,7 @@ class MainActivity : Activity() {
     private lateinit var homeInput: EditText
     private lateinit var awayInput: EditText
     private lateinit var modeSpinner: Spinner
+    private lateinit var summaryOutput: TextView
     private lateinit var output: TextView
     private lateinit var historyText: TextView
     private lateinit var homeScoreInput: EditText
@@ -62,11 +63,20 @@ class MainActivity : Activity() {
         }
         root.addView(run, lp())
 
+        summaryOutput = TextView(this).apply {
+            text = "合参结论将在起盘后显示"
+            textSize = 20f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            setTextIsSelectable(true)
+            setPadding(0, dp(14), 0, dp(6))
+        }
+        root.addView(summaryOutput)
+
         output = TextView(this).apply {
             text = "尚未起盘"
             textSize = 16f
             setTextIsSelectable(true)
-            setPadding(0, dp(14), 0, dp(12))
+            setPadding(0, dp(8), 0, dp(12))
         }
         root.addView(output)
 
@@ -120,7 +130,19 @@ class MainActivity : Activity() {
         )
         lastPrediction = prediction
         lastRecordIndex = -1
+        summaryOutput.text = renderConsensus(prediction)
         output.text = renderPrediction(prediction)
+    }
+
+    private fun renderConsensus(p: Prediction): String = buildString {
+        appendLine("三、合参结论")
+        appendLine("结构：${p.structure}")
+        appendLine("胜平负：${p.resultOrder}")
+        appendLine("不败：${p.unbeaten}")
+        appendLine("总进球：${p.goals}球核心  ${p.bigSmall}  ${p.oddEven}")
+        appendLine("半全场：${p.halfFull}")
+        appendLine("比分：${p.scores.joinToString(" / ")}")
+        append("信心：${p.confidence}")
     }
 
     private fun renderPrediction(p: Prediction): String {
